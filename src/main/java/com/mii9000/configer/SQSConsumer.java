@@ -1,5 +1,6 @@
 package com.mii9000.configer;
 
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
@@ -31,7 +32,7 @@ public class SQSConsumer {
         try {
             ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
                         .queueUrl(_queueUrl)
-                        .maxNumberOfMessages(1)
+                        .maxNumberOfMessages(10)
                         .build();
 
             LOGGER.info("Listening for messages...");
@@ -44,7 +45,7 @@ public class SQSConsumer {
                     //deleteMessage(queueUrl, message);
                 }
             }
-        } catch(SqsException | IOException e) {
+        } catch(SqsException | IOException | ConfigurationException e) {
             LOGGER.error(e.getMessage());
         } finally {
             _client.close();

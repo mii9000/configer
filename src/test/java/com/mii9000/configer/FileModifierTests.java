@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -22,31 +23,31 @@ public class FileModifierTests {
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
                 {
-                    "Upsert 1",
+                    "0 : Update 1",
                     String.format("env=prod%skey=007", System.lineSeparator()),
                     "config.properties",
-                    String.format("env=prod%skey=007", System.lineSeparator()),
+                    String.format("env=prod%skey=007%s", System.lineSeparator(), System.lineSeparator()),
                     "event1.json",
                     "ObjectCreated:Put"
                 },
                 {
-                    "Upsert 2",
+                    "1 : Update 2",
                     String.format("env=test%skey=123", System.lineSeparator()),
                     "config.properties",
-                    String.format("env=test%skey=123", System.lineSeparator()),
+                    String.format("env=test%skey=123%s", System.lineSeparator(), System.lineSeparator()),
                     "event1.json",
                     "ObjectCreated:Put"
                 },
                 {
-                    "Upsert 3",
+                    "2 : Update 3",
                     String.format("env=dev%skey=888", System.lineSeparator()),
                     "config.properties",
-                    String.format("env=dev%skey=888", System.lineSeparator()),
+                    String.format("env=dev%skey=888%s", System.lineSeparator(), System.lineSeparator()),
                     "event1.json",
                     "ObjectCreated:Put"
                 },
                 {
-                    "Event Not Matched",
+                    "3 : Event Not Matched",
                     String.format("env=dev%skey=888", System.lineSeparator()),
                     "config.properties",
                     _defaultConfigProperties,
@@ -54,7 +55,7 @@ public class FileModifierTests {
                     "ObjectCreated:Put"
                 },
                 {
-                    "File Not Matched",
+                    "4 : File Not Matched",
                     String.format("env=dev%skey=888", System.lineSeparator()),
                     "config.properties",
                     _defaultConfigProperties,
@@ -62,7 +63,7 @@ public class FileModifierTests {
                     "ObjectCreated:Put"
                 },
                 {
-                    "Do Not Delete Configs 1",
+                    "5 : Do Not Delete Configs 1",
                     "",
                     "config.properties",
                     _defaultConfigProperties,
@@ -70,7 +71,15 @@ public class FileModifierTests {
                     "ObjectCreated:Put"
                 },
                 {
-                    "Do Not Delete Configs 2",
+                    "6 : Do Not Delete Configs 2",
+                    "key=444",
+                    "config.properties",
+                    String.format("env=test%skey=444%s", System.lineSeparator(), System.lineSeparator()),
+                    "event1.json",
+                    "ObjectCreated:Put"
+                },
+                {
+                    "7 : Do Not Add Unmatched Config",
                     "uuu=000",
                     "config.properties",
                     _defaultConfigProperties,
@@ -103,11 +112,9 @@ public class FileModifierTests {
     }
 
     @Test
-    public void FileModifier_Modify_Test() throws IOException {
-        //RESET
-        WriteToFile(_destinationFileName, _defaultConfigProperties);
-
+    public void FileModifier_Modify_Test() throws IOException, ConfigurationException {
         //ARRANGE
+        WriteToFile(_destinationFileName, _defaultConfigProperties);
         IFileReader fileReader = new MockFileReader(_sourceContent);
         HashSet<String> files = new HashSet<>();
         files.add(_destinationFileName);
@@ -118,8 +125,7 @@ public class FileModifierTests {
         fileModifier.Modify(eventJson, _targetEvent);
 
         //ASSERT
-        String configFileContent = ReadFromFile(_destinationFileName);
-        assertEquals(_message, _destinationContent, configFileContent);
+        assertEquals(_message, _destinationContent, ReadFromFile(_destinationFileName));
     }
 
     private String ReadFromFile(String fileName) throws IOException {
