@@ -5,6 +5,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.jms.JMSException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -31,25 +32,9 @@ public class ConfigerClientDebug
         System.setOut(new PrintStream(outContent));
     }
 
-    @Test
-    public void SQSConsumerIntegrationDebugger() {
-        //SQSConsumer sut = new SQSConsumer("test", Collections.emptyList());
-        //sut.Subscribe("https://sqs.ap-south-1.amazonaws.com/444151335418/s3_events");
-
-        /*
-        * var s3Config = new S3Config(profile, bucket, file);
-        * var s3Reader = new S3FileReader(s3Config);
-        *
-        * var fileModifier = new FileModifier(HashSet<String> listOfFilesToWatchForUpdate, s3Reader);
-        *
-        * var consumerConfig = new SQSConsumerConfig(profile, url);
-        * var consumer = new SQSConsumer(consumerConfig);
-        * consumer.Subscribe(fileModifier);
-        * */
-
-        SQSConsumer consumer = new SQSConsumer("test",
-                "https://sqs.ap-south-1.amazonaws.com/444151335418/s3_events",
-                "ObjectCreated:Put");
+    //@Test
+    public void SQSConsumerIntegrationDebugger() throws JMSException {
+        SQSConsumer consumer = new SQSConsumer("test","s3_events","ObjectCreated:Put");
 
         IFileReader s3FileReader = new S3FileReader("test", "configer");
 

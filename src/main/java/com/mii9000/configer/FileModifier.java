@@ -7,21 +7,12 @@ import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileModifier implements IFileModifier {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileModifier.class);
 
     private final HashSet<String> _listOfFilesToWatchForUpdate;
     private final IFileReader _iFileReader;

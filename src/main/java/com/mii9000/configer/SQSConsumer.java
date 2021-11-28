@@ -1,68 +1,79 @@
 package com.mii9000.configer;
 
+import com.amazon.sqs.javamessaging.ProviderConfiguration;
+import com.amazon.sqs.javamessaging.SQSConnection;
+import com.amazon.sqs.javamessaging.SQSConnectionFactory;
+import com.amazon.sqs.javamessaging.message.SQSTextMessage;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
-import software.amazon.awssdk.services.sqs.model.SqsException;
 
+import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
+import javax.jms.Session;
 import java.io.IOException;
-import java.util.List;
 
 public class SQSConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(SQSConsumer.class);
-    private final SqsClient _client;
+
     private final String _watchEvent;
-    private final String _queueUrl;
+    private final String _queue;
+    private final SQSConnectionFactory _connectionFactory;
 
-    public SQSConsumer(String CredentialProfile, String QueueUrl, String WatchEvent) {
-        _queueUrl = QueueUrl;
-        _client = SqsClient
-                .builder()
-                .credentialsProvider(ProfileCredentialsProvider.create(CredentialProfile))
-                .build();
+    public SQSConsumer(String CredentialProfile, String Queue, String WatchEvent) {
+        _queue = Queue;
         _watchEvent = WatchEvent;
+        _connectionFactory = new SQSConnectionFactory(
+                new ProviderConfiguration(),
+                AmazonSQSClientBuilder.standard()
+                        .withCredentials(new com.amazonaws.auth.profile.ProfileCredentialsProvider(CredentialProfile))
+        );
     }
 
-    public void Subscribe(IFileModifier fileModifier) {
+    public void Subscribe(IFileModifier fileModifier) throws JMSException {
+        SQSConnection connection = _connectionFactory.createConnection();
+
+        Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
+
+        MessageConsumer consumer = session.createConsumer(session.createQueue( _queue));
+
+        connection.start();
+
+        receiveMessages(consumer, fileModifier, _watchEvent);
+
+        connection.close();
+
+        LOGGER.debug("Connection closed");
+    }
+
+    private static void receiveMessages(MessageConsumer consumer, IFileModifier fileModifier, String watchEvent) {
         try {
-            ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
-                        .queueUrl(_queueUrl)
-                        .maxNumberOfMessages(10)
-                        .build();
+            while(true) {
+                LOGGER.debug("Listening for config messages...");
 
-            LOGGER.info("Listening for messages...");
+                javax.jms.Message message = consumer.receive();
 
-            while (true) {
-                List<Message> messages = _client.receiveMessage(receiveMessageRequest).messages();
+                LOGGER.info("Received Message ID : " + message.getJMSMessageID());
 
-                for (Message message : messages) {
-                    fileModifier.Modify(message.body(), _watchEvent);
-                    //deleteMessage(queueUrl, message);
-                }
+                SQSTextMessage sqsTextMessage = (SQSTextMessage)message;
+
+                String eventText = sqsTextMessage.getText();
+
+                LOGGER.debug(eventText);
+
+                fileModifier.Modify(eventText, watchEvent);
+
+                LOGGER.debug("Finished File Modification");
+
+                sqsTextMessage.acknowledge();
+
+                LOGGER.debug("Message Acknowledged : " + message.getJMSMessageID());
             }
-        } catch(SqsException | IOException | ConfigurationException e) {
-            LOGGER.error(e.getMessage());
-        } finally {
-            _client.close();
+        } catch (ConfigurationException | IOException | JMSException e) {
+            LOGGER.error(e.getMessage(), e);
         }
-    }
-
-    /**
-     * Message from queue needs to be deleted once processing done
-     * @param queueUrl SQS Url
-     * @param message Message handler
-     */
-    private void deleteMessage(String queueUrl, Message message) {
-        DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .receiptHandle(message.receiptHandle())
-                .build();
-        _client.deleteMessage(deleteMessageRequest);
-        LOGGER.info("Deleted message : " + message.messageId());
     }
 }
