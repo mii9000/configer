@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-public class S3FileReader implements IS3FileReader {
+public class S3FileReader implements IFileReader {
     private final S3Client _client;
     private final String _bucket;
 

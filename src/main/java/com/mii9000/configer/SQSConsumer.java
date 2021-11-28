@@ -1,6 +1,5 @@
 package com.mii9000.configer;
 
-import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
@@ -16,14 +15,16 @@ import java.util.List;
 public class SQSConsumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(SQSConsumer.class);
     private final SqsClient _client;
+    private final String _watchEvent;
     private final String _queueUrl;
 
-    public SQSConsumer(String CredentialProfile, String QueueUrl) {
+    public SQSConsumer(String CredentialProfile, String QueueUrl, String WatchEvent) {
         _queueUrl = QueueUrl;
         _client = SqsClient
                 .builder()
                 .credentialsProvider(ProfileCredentialsProvider.create(CredentialProfile))
                 .build();
+        _watchEvent = WatchEvent;
     }
 
     public void Subscribe(IFileModifier fileModifier) {
@@ -39,13 +40,12 @@ public class SQSConsumer {
                 List<Message> messages = _client.receiveMessage(receiveMessageRequest).messages();
 
                 for (Message message : messages) {
-                    String body = message.body();
-                    fileModifier.Modify(body);
+                    fileModifier.Modify(message.body(), _watchEvent);
                     //deleteMessage(queueUrl, message);
                 }
             }
-        } catch(SqsException | IOException | ConfigurationException e) {
-            //LOGGER.error(e.awsErrorDetails().errorMessage());
+        } catch(SqsException | IOException e) {
+            LOGGER.error(e.getMessage());
         } finally {
             _client.close();
         }
