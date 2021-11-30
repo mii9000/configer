@@ -8,8 +8,6 @@ import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
-import software.amazon.awssdk.services.sqs.model.Message;
 
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
